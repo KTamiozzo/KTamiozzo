@@ -1,0 +1,160 @@
+- 👋 Hi, I’m @KTamiozzo
+- 👀 I’m interested in ...
+- 🌱 I’m currently learning ...
+- 💞️ I’m looking to collaborate on ...
+- 📫 How to reach me ...
+- 😄 Pronouns: ...
+- ⚡ Fun fact: ...
+
+<!---
+KTamiozzo/KTamiozzo is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+You can click the Preview link to take a look at your changes.
+--->
+-- Criação do esquema de banco de dados para cenário de e-commerce
+
+-- Tabela: Clientes
+CREATE TABLE Clientes (
+    ClienteID INT PRIMARY KEY AUTO_INCREMENT,
+    Nome VARCHAR(255) NOT NULL,
+    Tipo ENUM('PJ', 'PF') NOT NULL,
+    Documento VARCHAR(20) UNIQUE NOT NULL
+);
+
+-- Tabela: Formas de Pagamento
+CREATE TABLE FormasPagamento (
+    PagamentoID INT PRIMARY KEY AUTO_INCREMENT,
+    TipoPagamento VARCHAR(50) NOT NULL
+);
+
+-- Tabela: Pedidos
+CREATE TABLE Pedidos (
+    PedidoID INT PRIMARY KEY AUTO_INCREMENT,
+    ClienteID INT NOT NULL,
+    DataPedido DATE NOT NULL,
+    Total DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (ClienteID) REFERENCES Clientes(ClienteID)
+);
+
+-- Tabela: Pedidos_FormasPagamento (Relacionamento N:N)
+CREATE TABLE Pedidos_FormasPagamento (
+    PedidoID INT NOT NULL,
+    PagamentoID INT NOT NULL,
+    PRIMARY KEY (PedidoID, PagamentoID),
+    FOREIGN KEY (PedidoID) REFERENCES Pedidos(PedidoID),
+    FOREIGN KEY (PagamentoID) REFERENCES FormasPagamento(PagamentoID)
+);
+
+-- Tabela: Produtos
+CREATE TABLE Produtos (
+    ProdutoID INT PRIMARY KEY AUTO_INCREMENT,
+    NomeProduto VARCHAR(255) NOT NULL,
+    Preco DECIMAL(10, 2) NOT NULL,
+    Estoque INT NOT NULL
+);
+
+-- Tabela: Fornecedores
+CREATE TABLE Fornecedores (
+    FornecedorID INT PRIMARY KEY AUTO_INCREMENT,
+    NomeFornecedor VARCHAR(255) NOT NULL,
+    Contato VARCHAR(50)
+);
+
+-- Tabela: Produtos_Fornecedores (Relacionamento N:N)
+CREATE TABLE Produtos_Fornecedores (
+    ProdutoID INT NOT NULL,
+    FornecedorID INT NOT NULL,
+    PRIMARY KEY (ProdutoID, FornecedorID),
+    FOREIGN KEY (ProdutoID) REFERENCES Produtos(ProdutoID),
+    FOREIGN KEY (FornecedorID) REFERENCES Fornecedores(FornecedorID)
+);
+
+-- Tabela: Entregas
+CREATE TABLE Entregas (
+    EntregaID INT PRIMARY KEY AUTO_INCREMENT,
+    PedidoID INT NOT NULL,
+    StatusEntrega VARCHAR(50) NOT NULL,
+    CodigoRastreamento VARCHAR(50),
+    FOREIGN KEY (PedidoID) REFERENCES Pedidos(PedidoID)
+);
+
+-- Inserção de dados para teste
+
+-- Clientes
+INSERT INTO Clientes (Nome, Tipo, Documento) VALUES
+('João Silva', 'PF', '12345678901'),
+('Empresa ABC', 'PJ', '12345678000199');
+
+-- Formas de Pagamento
+INSERT INTO FormasPagamento (TipoPagamento) VALUES
+('Cartão de Crédito'),
+('Boleto Bancário'),
+('Pix');
+
+-- Produtos
+INSERT INTO Produtos (NomeProduto, Preco, Estoque) VALUES
+('Notebook', 3000.00, 50),
+('Smartphone', 2000.00, 100);
+
+-- Fornecedores
+INSERT INTO Fornecedores (NomeFornecedor, Contato) VALUES
+('Fornecedor A', 'contato@fornecedora.com'),
+('Fornecedor B', 'contato@fornecedorb.com');
+
+-- Relacionamentos Produtos_Fornecedores
+INSERT INTO Produtos_Fornecedores (ProdutoID, FornecedorID) VALUES
+(1, 1),
+(2, 2);
+
+-- Pedidos
+INSERT INTO Pedidos (ClienteID, DataPedido, Total) VALUES
+(1, '2024-01-01', 5000.00),
+(2, '2024-01-02', 2000.00);
+
+-- Relacionamento Pedidos_FormasPagamento
+INSERT INTO Pedidos_FormasPagamento (PedidoID, PagamentoID) VALUES
+(1, 1),
+(2, 3);
+
+-- Entregas
+INSERT INTO Entregas (PedidoID, StatusEntrega, CodigoRastreamento) VALUES
+(1, 'Entregue', 'R123456789BR'),
+(2, 'Em Transporte', 'R987654321BR');
+
+-- Consultas complexas
+
+-- 1. Quantos pedidos foram feitos por cada cliente?
+SELECT c.Nome AS Cliente, COUNT(p.PedidoID) AS TotalPedidos
+FROM Clientes c
+LEFT JOIN Pedidos p ON c.ClienteID = p.ClienteID
+GROUP BY c.Nome;
+
+-- 2. Algum vendedor também é fornecedor?
+SELECT c.Nome AS NomeVendedor, f.NomeFornecedor AS NomeFornecedor
+FROM Clientes c
+INNER JOIN Fornecedores f ON c.Nome = f.NomeFornecedor;
+
+-- 3. Relação de produtos, fornecedores e estoques
+SELECT p.NomeProduto, f.NomeFornecedor, p.Estoque
+FROM Produtos p
+INNER JOIN Produtos_Fornecedores pf ON p.ProdutoID = pf.ProdutoID
+INNER JOIN Fornecedores f ON pf.FornecedorID = f.FornecedorID;
+
+-- 4. Relação de nomes dos fornecedores e nomes dos produtos
+SELECT f.NomeFornecedor, p.NomeProduto
+FROM Fornecedores f
+INNER JOIN Produtos_Fornecedores pf ON f.FornecedorID = pf.FornecedorID
+INNER JOIN Produtos p ON pf.ProdutoID = p.ProdutoID;
+
+-- 5. Produtos com estoque menor que 100 ordenados pelo nome
+SELECT NomeProduto, Estoque
+FROM Produtos
+WHERE Estoque < 100
+ORDER BY NomeProduto;
+
+-- 6. Total gasto por cliente com mais de um pedido
+SELECT c.Nome AS Cliente, SUM(p.Total) AS TotalGasto
+FROM Clientes c
+INNER JOIN Pedidos p ON c.ClienteID = p.ClienteID
+GROUP BY c.Nome
+HAVING COUNT(p.PedidoID) > 1;
+
